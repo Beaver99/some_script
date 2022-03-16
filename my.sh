@@ -12,10 +12,10 @@ V6_PROXY=""
 IP=`curl -sL -4 ip.sb`
 if [[ "$?" != "0" ]]; then
     IP=`curl -sL -6 ip.sb`
-    V6_PROXY="https://gh.hijk.art/"
+    V6_PROXY=""
 fi
 
-CONFIG_FILE="/etc/v2ray/config.json"
+CONFIG_FILE="/usr/local/etc/v2ray/config.json"
 
 colorEcho() {
     echo -e "${1}${@:2}${PLAIN}"
@@ -50,25 +50,13 @@ checkSystem() {
      fi
 }
 
-slogon() {
-    clear
-    echo "#############################################################"
-    echo -e "#            ${RED}Ubuntu LTS v2ray一键安装脚本${PLAIN}                #"
-    echo -e "# ${GREEN}作者${PLAIN}: 网络跳越(hijk)                                      #"
-    echo -e "# ${GREEN}网址${PLAIN}: https://hijk.art                                    #"
-    echo -e "# ${GREEN}论坛${PLAIN}: https://hijk.club                                   #"
-    echo -e "# ${GREEN}TG群${PLAIN}: https://t.me/hijkclub                               #"
-    echo -e "# ${GREEN}Youtube频道${PLAIN}: https://youtube.com/channel/UCYTB--VsObzepVJtc9yvUxQ #"
-    echo "#############################################################"
-    echo ""
-}
 # my custom
 getData() {
     while true
     do
         #read -p " 请输入v2ray的端口[1-65535]:" PORT
         #[ -z "$PORT" ] && PORT="21568"
-        PORT="31568"
+        PORT="31468"
         if [ "${PORT:0:1}" = "0" ]; then
             echo -e " ${RED}端口不能以0开头${PLAIN}"
             exit 1
@@ -96,7 +84,7 @@ preinstall() {
     apt update
     apt -y upgrade
     colorEcho $BLUE " 安装必要软件"
-    apt install -y telnet wget vim net-tools ntpdate unzip
+    apt install -y telnet wget vim net-tools ntpdate unzip selinux-utils
     res=`which wget`
     [ "$?" != "0" ] && apt install -y wget
     res=`which netstat`
@@ -105,8 +93,12 @@ preinstall() {
 }
 
 installV2ray() {
+    setenforce 0
+
     colorEcho $BLUE " 安装v2ray..."
-    bash <(curl -sL ${V6_PROXY}https://raw.githubusercontent.com/v2fly/fhs-install-v2ray/master/install-release.sh)
+    #问题出现在这里，config file 空空如也
+    #bash <(curl -sL https://raw.githubusercontent.com/v2fly/fhs-install-v2ray/master/install-release.sh)
+    bash <(curl -sL )
 
     if [ ! -f $CONFIG_FILE ]; then
         colorEcho $RED " $OS 安装V2ray失败，请到 https://hijk.art 网站反馈"
@@ -119,6 +111,7 @@ installV2ray() {
     alterid=`date -u +%-e`
     alterid=`expr $((${alterid} + 49))`
     sed -i -e "s/alterId\":.*[0-9]*/alterId\": ${alterid}/" $CONFIG_FILE
+
     uid=`grep id $CONFIG_FILE| cut -d: -f2 | tr -d \",' '`
     ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
     ntpdate -u time.nist.gov
@@ -126,10 +119,11 @@ installV2ray() {
     systemctl enable v2ray
     systemctl restart v2ray
     sleep 3
+    # 问题，启动也没有成功
     res=`netstat -ntlp| grep ${PORT} | grep v2ray`
     if [ "${res}" = "" ]; then
         colorEcho $red " $OS 端口号：${PORT}，v2启动失败，请检查端口是否被占用！"
-        exit 1
+        #exit 1
     fi
     colorEcho $GREEN " v2ray安装成功！"
 }
@@ -140,38 +134,6 @@ setFirewall() {
         ufw allow ${PORT}/tcp
         ufw allow ${PORT}/udp
     fi
-}
-
-installBBR() {
-    result=$(lsmod | grep bbr)
-    if [ "$result" != "" ]; then
-        colorEcho $BLUE " BBR模块已安装"
-        INSTALL_BBR=false
-        return;
-    fi
-
-    res=`hostnamectl | grep -i openvz`
-    if [ "$res" != "" ]; then
-        colorEcho $YELLOW " openvz机器，跳过安装"
-        INSTALL_BBR=false
-        return
-    fi
-
-    echo "net.core.default_qdisc=fq" >> /etc/sysctl.conf
-    echo "net.ipv4.tcp_congestion_control=bbr" >> /etc/sysctl.conf
-    sysctl -p
-    result=$(lsmod | grep bbr)
-    if [[ "$result" != "" ]]; then
-        colorEcho $GREEN " BBR模块已启用"
-        INSTALL_BBR=false
-        return
-    fi
-
-    colorEcho $BLUE " 安装BBR模块..."
-    apt install -y --install-recommends linux-generic-hwe-16.04
-    grub-set-default 0
-    echo "tcp_bbr" >> /etc/modules-load.d/modules.conf
-    INSTALL_BBR=false
 }
 
 info() {
@@ -220,17 +182,6 @@ info() {
     echo -e " ${BLUE}vmess链接:${PLAIN} $link"
 }
 
-bbrReboot() {
-    if [ "${INSTALL_BBR}" == "true" ]; then
-        echo  
-        colorEcho $BLUE " 为使BBR模块生效，系统将在30秒后重启"
-        echo  
-        echo -e " 您可以按 ctrl + c 取消重启，稍后输入 ${RED}reboot${PLAIN} 重启系统"
-        sleep 30
-        reboot
-    fi
-}
-
 
 install() {
     echo -n " 系统版本:  "
@@ -247,33 +198,4 @@ install() {
 #     bbrReboot
 }
 
-uninstall() {
-    read -p " 确定卸载v2ray吗？(y/n)" answer
-    [ -z ${answer} ] && answer="n"
-
-    if [ "${answer}" == "y" ] || [ "${answer}" == "Y" ]; then
-        systemctl stop v2ray
-        systemctl disable v2ray
-        rm -rf /etc/v2ray/*
-        rm -rf /usr/bin/v2ray/*
-        rm -rf /var/log/v2ray/*
-        rm -rf /etc/systemd/system/v2ray.service
-        rm -rf /etc/systemd/system/multi-user.target.wants/v2ray.service
-        
-        echo -e " ${RED}卸载成功${PLAIN}"
-    fi
-}
-
-#slogon
-
-action=$1
-[ -z $1 ] && action=install
-case "$action" in
-    install|uninstall|info)
-        ${action}
-        ;;
-    *)
-        echo " 参数错误"
-        echo " 用法: `basename $0` [install|uninstall]"
-        ;;
-esac
+install

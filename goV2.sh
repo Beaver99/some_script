@@ -193,7 +193,7 @@ downloadV2Ray(){
     colorEcho ${BLUE} "Downloading V2Ray: ${DOWNLOAD_LINK}"
     curl ${PROXY} -L -H "Cache-Control: no-cache" -o ${ZIPFILE} ${DOWNLOAD_LINK}
     if [ $? != 0 ];then
-        colorEcho ${RED} "Failed to download! Please check your network or try again."
+        colorEcho ${RED} "Failed to download V2ray! Please check your network or try again."
         return 3
     fi
     return 0
@@ -266,6 +266,7 @@ getVersion(){
         VER="$(/usr/bin/v2ray/v2ray -version 2>/dev/null)"
         RETVAL=$?
         CUR_VER="$(normalizeVersion "$(echo "$VER" | head -n 1 | cut -d " " -f2)")"
+        # 版本对吗？
         TAG_URL="${V6_PROXY}https://api.github.com/repos/v2fly/v2ray-core/releases/latest"
         NEW_VER="$(normalizeVersion "$(curl ${PROXY} -s "${TAG_URL}" --connect-timeout 10| grep 'tag_name' | cut -d\" -f4)")"
 
