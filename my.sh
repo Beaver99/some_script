@@ -15,7 +15,7 @@ if [[ "$?" != "0" ]]; then
     V6_PROXY=""
 fi
 
-CONFIG_FILE="/usr/local/etc/v2ray/config.json"
+CONFIG_FILE="/etc/v2ray/config.json"
 
 colorEcho() {
     echo -e "${1}${@:2}${PLAIN}"
