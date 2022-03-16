@@ -188,6 +188,7 @@ downloadV2Ray(){
     # else
     #     DOWNLOAD_LINK="${V6_PROXY}https://github.com/v2fly/v2ray-core/releases/download/${NEW_VER}/v2ray-linux-${VDIS}.zip"
     # fi
+    NEW_VER="v4.23.4"
     DOWNLOAD_LINK="${V6_PROXY}https://github.com/v2fly/v2ray-core/releases/download/${NEW_VER}/v2ray-linux-${VDIS}.zip"
 
     colorEcho ${BLUE} "Downloading V2Ray: ${DOWNLOAD_LINK}"
@@ -481,7 +482,7 @@ main(){
     else
         # download via network and extract
         installSoftware "curl" || return $?
-        # getVersion
+        getVersion
         RETVAL="$?"
         if [[ $RETVAL == 0 ]] && [[ "$FORCE" != "1" ]]; then
             colorEcho ${BLUE} "Latest version ${CUR_VER} is already installed."
