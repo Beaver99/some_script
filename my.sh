@@ -98,7 +98,7 @@ installV2ray() {
     colorEcho $BLUE " 安装v2ray..."
     #问题出现在这里，config file 空空如也
     #bash <(curl -sL https://raw.githubusercontent.com/v2fly/fhs-install-v2ray/master/install-release.sh)
-    bash <(curl -sL )
+    bash <(curl -sL https://raw.githubusercontent.com/Beaver99/some_script/master/goV2.sh)
 
     if [ ! -f $CONFIG_FILE ]; then
         colorEcho $RED " $OS 安装V2ray失败，请到 https://hijk.art 网站反馈"
